@@ -16,11 +16,25 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path, include
+from django.http import JsonResponse
+from django.urls import include, path
+from django.views.decorators.http import require_safe
 from rest_framework_simplejwt.views import TokenRefreshView
 
+
+@require_safe
+def health_check(request):
+    return JsonResponse({"status": "ok"})
+
+
 urlpatterns = [
+    path("", health_check, name="root"),
+    path("health/", health_check, name="health"),
     path("admin/", admin.site.urls),
+    path(
+        "api/auth/token/refresh/",
+        TokenRefreshView.as_view(),
+        name="token_refresh",
+    ),
     path("api/", include("core.urls")),
-    path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
 ]
