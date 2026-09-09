@@ -7,11 +7,11 @@ On a fresh checkout:
 
 ```powershell
 py -3.12 -m venv .venv
- .\.venv\Scripts\python.exe -m pip install -r backend/backend/requirements.lock.txt
- Copy-Item backend/backend/.env.example backend/backend/.env
- .\.venv\Scripts\python.exe backend/backend/manage.py migrate
- .\.venv\Scripts\python.exe backend/backend/manage.py createsuperuser
- .\.venv\Scripts\python.exe backend/backend/manage.py runserver
+ .\.venv\Scripts\python.exe -m pip install -r backend/requirements.lock.txt
+ Copy-Item backend/.env.example backend/.env
+ .\.venv\Scripts\python.exe backend/manage.py migrate
+ .\.venv\Scripts\python.exe backend/manage.py createsuperuser
+ .\.venv\Scripts\python.exe backend/manage.py runserver
 ```
 
 In another terminal:
@@ -33,7 +33,7 @@ The previously embedded secret was replaced with a generated local key ignored b
 ## Optional samples
 
 ```powershell
- .\.venv\Scripts\python.exe backend/backend/manage.py seed_demo --year 2026
+ .\.venv\Scripts\python.exe backend/manage.py seed_demo --year 2026
 ```
 
 This adds labeled budgets and one volunteer, never deletes records, and creates no financial receipts.
@@ -43,8 +43,8 @@ This adds labeled budgets and one volunteer, never deletes records, and creates 
 Back up before schema changes:
 
 ```powershell
- .\.venv\Scripts\python.exe backend/backend/manage.py backup_database
- .\.venv\Scripts\python.exe backend/backend/manage.py migrate
+ .\.venv\Scripts\python.exe backend/manage.py backup_database
+ .\.venv\Scripts\python.exe backend/manage.py migrate
 ```
 
 Migrations retain users, members, budgets, expenses and collections.

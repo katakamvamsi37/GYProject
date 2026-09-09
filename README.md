@@ -21,10 +21,10 @@ A committee workspace for Ganesh festival budgets, expenses, collections, volunt
 Backend (PowerShell):
 
 ```powershell
- .\.venv\Scripts\python.exe -m pip install -r backend/backend/requirements.lock.txt
- .\.venv\Scripts\python.exe backend/backend/manage.py migrate
- .\.venv\Scripts\python.exe backend/backend/manage.py createsuperuser
- .\.venv\Scripts\python.exe backend/backend/manage.py runserver
+ .\.venv\Scripts\python.exe -m pip install -r backend/requirements.lock.txt
+ .\.venv\Scripts\python.exe backend/manage.py migrate
+ .\.venv\Scripts\python.exe backend/manage.py createsuperuser
+ .\.venv\Scripts\python.exe backend/manage.py runserver
 ```
 
 Frontend (second terminal):
@@ -55,8 +55,8 @@ The ledger is an operational festival record, not a statutory accounting or bank
 ## Verify changes
 
 ```powershell
- .\.venv\Scripts\python.exe backend/backend/manage.py test core.tests
- .\.venv\Scripts\python.exe backend/backend/manage.py makemigrations --check --dry-run
+ .\.venv\Scripts\python.exe backend/manage.py test core.tests
+ .\.venv\Scripts\python.exe backend/manage.py makemigrations --check --dry-run
 cd frontend
 npm run lint
 npm run format:check
