@@ -86,9 +86,9 @@ Store secrets outside source control. Use a trusted HTTPS reverse proxy and a su
 Generate a key locally without printing or committing it unnecessarily; configure it through your hosting secret manager.
 
 ```powershell
- .\.venv\Scripts\python.exe backend/backend/manage.py migrate
- .\.venv\Scripts\python.exe backend/backend/manage.py collectstatic --noinput
- .\.venv\Scripts\python.exe backend/backend/manage.py check --deploy
+ .\.venv\Scripts\python.exe backend/manage.py migrate
+ .\.venv\Scripts\python.exe backend/manage.py collectstatic --noinput
+ .\.venv\Scripts\python.exe backend/manage.py check --deploy
 cd frontend
 npm run build
 ```
