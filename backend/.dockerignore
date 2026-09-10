@@ -1,0 +1,13 @@
+**/__pycache__
+**/*.py[cod]
+.venv
+**/.venv
+.env
+.env.*
+.development-key
+*.sqlite3*
+staticfiles
+backups
+.git
+core/tests
+requirements-dev.txt

@@ -13,6 +13,12 @@ backups/
 __pycache__/
 *.pyc
 .env
+.env.*
+!.env.example
+!**/.env.example
+deploy/aws/task-definition.json
+deploy/aws/bootstrap-task-definition.json
+deploy/*.zip
 *.sqlite3
 *.sqlite3.bak
 archive/**/*.sqlite3

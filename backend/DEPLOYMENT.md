@@ -1,5 +1,10 @@
 # Deploy the existing Render backend
 
+For Docker and AWS ECS Fargate, follow the separate
+[AWS backend deployment guide](../docs/AWS_DOCKER_DEPLOYMENT.md).
+
+For a browser upload workflow, use the [Beanstalk console guide](../docs/AWS_CONSOLE_DEPLOYMENT.md).
+
 Backend source: `GYProject/backend`. The frontend is maintained in the separate
 `GYFrontEnd/GYProjectFrontEnd/frontend` checkout.
 

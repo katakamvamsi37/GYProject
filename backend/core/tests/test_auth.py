@@ -1,9 +1,14 @@
 from django.core.cache import cache
+from django.test import override_settings
 from core.models import AuditEvent
 from .base import APITestCase
 
 
 class AuthenticationTests(APITestCase):
+    # Isolate account lookups from optional database-backed throttle bookkeeping.
+    @override_settings(
+        CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+    )
     def test_missing_login_fields_do_not_query_accounts(self):
         self.use(None)
         for body in ({}, {"email": "  ", "password": "test"}, {"email": "admin"}):

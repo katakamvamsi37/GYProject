@@ -1,0 +1,5 @@
+{
+  "AWSEBDockerrunVersion": "1",
+  "Ports": [{"ContainerPort": "8000"}],
+  "Command": "python docker/beanstalk_start.py"
+}

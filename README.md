@@ -4,6 +4,10 @@ A committee workspace for Ganesh festival budgets, expenses, collections, volunt
 
 **Start here:** [Setup](docs/SETUP.md) · [Folder map](docs/ARCHITECTURE.md) · [Daily workflow](docs/WORKFLOWS.md) · [Maintenance](docs/MAINTENANCE.md)
 
+**Docker and AWS:** [Local Docker setup and complete AWS backend deployment guide](docs/AWS_DOCKER_DEPLOYMENT.md).
+
+**Deploy using the browser:** [Elastic Beanstalk upload guide and optional Amplify frontend](docs/AWS_CONSOLE_DEPLOYMENT.md).
+
 ## What works
 
 - Password sign-in, session refresh, logout, profile updates and password changes.

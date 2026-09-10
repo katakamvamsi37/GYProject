@@ -1,0 +1,62 @@
+name: gyproject
+
+x-backend: &backend
+  image: gyproject-backend:local
+  build:
+    context: ./backend
+  environment:
+    DJANGO_DEBUG: "true"
+    DJANGO_SECRET_KEY: local-docker-only-not-a-production-secret
+    DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,backend
+    CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+    DJANGO_TRUST_PROXY_HEADERS: "false"
+    DJANGO_HTTP_HEALTHCHECK: "true"
+    DJANGO_CACHE_TABLE: gyproject_cache
+    POSTGRES_DB: gyproject
+    POSTGRES_USER: gyproject
+    POSTGRES_PASSWORD: local-docker-only
+    POSTGRES_HOST: db
+    POSTGRES_PORT: "5432"
+    POSTGRES_SSLMODE: disable
+
+services:
+  db:
+    image: postgres:18-bookworm
+    environment:
+      POSTGRES_DB: gyproject
+      POSTGRES_USER: gyproject
+      POSTGRES_PASSWORD: local-docker-only
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gyproject -d gyproject"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  migrate:
+    <<: *backend
+    command: ["sh", "-c", "python manage.py migrate --noinput && python manage.py createcachetable"]
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    restart: "no"
+
+  backend:
+    <<: *backend
+    ports:
+      - "127.0.0.1:${GY_BACKEND_PORT:-8000}:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    stop_grace_period: 90s
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

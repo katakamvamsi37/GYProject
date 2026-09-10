@@ -80,21 +80,26 @@ if DATABASE_URL:
             ssl_require=not DEBUG,
         )
     }
-elif os.getenv("POSTGRES_DB"):
+elif os.getenv("POSTGRES_DB") or os.getenv("RDS_DB_NAME"):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.environ["POSTGRES_DB"],
-            "USER": os.getenv("POSTGRES_USER"),
-            "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
-            "HOST": os.getenv("POSTGRES_HOST", "localhost"),
-            "PORT": os.getenv("POSTGRES_PORT", "5432"),
+            "NAME": os.getenv("POSTGRES_DB") or os.environ["RDS_DB_NAME"],
+            "USER": os.getenv("POSTGRES_USER", os.getenv("RDS_USERNAME")),
+            "PASSWORD": os.getenv("POSTGRES_PASSWORD", os.getenv("RDS_PASSWORD")),
+            "HOST": os.getenv("POSTGRES_HOST", os.getenv("RDS_HOSTNAME", "localhost")),
+            "PORT": os.getenv("POSTGRES_PORT", os.getenv("RDS_PORT", "5432")),
+            "CONN_MAX_AGE": 600,
+            "CONN_HEALTH_CHECKS": True,
+            "OPTIONS": {
+                "sslmode": os.getenv("POSTGRES_SSLMODE", "disable" if DEBUG else "require"),
+            },
         }
     }
 else:
     if IS_RENDER or not DEBUG:
         raise ImproperlyConfigured(
-            "Set DATABASE_URL to your Render PostgreSQL Internal Database URL "
+            "Set DATABASE_URL to your PostgreSQL connection URL "
             "(or configure POSTGRES_DB and the other POSTGRES_* settings)."
         )
     DATABASES = {
@@ -144,15 +149,31 @@ EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "true").lower() == "true"
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
-# Render terminates HTTPS at its proxy and forwards the original scheme.
-if IS_RENDER:
+# Enable only when requests arrive through a trusted HTTPS-terminating proxy.
+TRUST_PROXY_HEADERS = (
+    IS_RENDER or os.getenv("DJANGO_TRUST_PROXY_HEADERS", "false").lower() == "true"
+)
+if TRUST_PROXY_HEADERS:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+# AWS load balancers may check this endpoint over their private HTTP connection.
+if os.getenv("DJANGO_HTTP_HEALTHCHECK", "false").lower() == "true":
+    SECURE_REDIRECT_EXEMPT = [r"^health/$"]
+    MIDDLEWARE.insert(0, "config.health.ContainerHealthMiddleware")
 SECURE_SSL_REDIRECT = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 SECURE_HSTS_PRELOAD = not DEBUG
+# A shared database cache is sufficient for the initial committee workload and
+# avoids process-local throttles. Run createcachetable in the release task.
+if cache_table := os.getenv("DJANGO_CACHE_TABLE"):
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+            "LOCATION": cache_table,
+        }
+    }
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework_simplejwt.authentication.JWTAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
