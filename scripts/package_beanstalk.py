@@ -1,7 +1,7 @@
 """Build the console upload ZIP using an allowlist; never package the workspace."""
 
 from pathlib import Path
-from zipfile import ZIP_DEFLATED, ZipFile
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 ROOT = Path(__file__).resolve().parents[1]
 BACKEND = ROOT / "backend"
@@ -32,12 +32,22 @@ def sources():
     )
 
 
+def add_file(archive, source, target):
+    """Write a Linux-compatible ZIP member with explicit safe permissions."""
+    data = source.read_bytes().replace(b"\r\n", b"\n")
+    mode = 0o755 if source.suffix == ".sh" else 0o644
+
+    info = ZipInfo(target)
+    info.create_system = 3  # Unix, so external_attr is interpreted as POSIX mode bits.
+    info.external_attr = (mode & 0xFFFF) << 16
+    archive.writestr(info, data, compress_type=ZIP_DEFLATED)
+
+
 def main():
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(OUTPUT, "w", ZIP_DEFLATED) as archive:
         for source, target in sources():
-            # Normalize source line endings for Linux, including Windows checkouts.
-            archive.writestr(target, source.read_bytes().replace(b"\r\n", b"\n"))
+            add_file(archive, source, target)
     print(f"Created {OUTPUT}")
     print("Upload this ZIP to the Docker on Amazon Linux 2023 Beanstalk platform.")
 
