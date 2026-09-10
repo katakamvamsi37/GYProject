@@ -8,3 +8,4 @@ psycopg[binary]>=3.2,<4
 gunicorn>=23,<24
 whitenoise>=6.9,<7
 openpyxl>=3.1.5,<4
+Pillow>=12.3,<13

@@ -1,6 +1,7 @@
 """Festival records. Financial records are retained; corrections use review/void actions."""
 
 import hashlib
+from uuid import uuid4
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -131,13 +132,21 @@ class UserProfile(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile"
     )
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="member")
-    phone = models.CharField(max_length=30, blank=True)
+    phone = models.CharField(max_length=30, blank=True, db_index=True)
     avatar_url = models.URLField(blank=True)
     phone_verified = models.BooleanField(default=False)
     email_verified = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.user.username} ({self.role})"
+
+
+class ProfileImage(models.Model):
+    # Kept separately so account lists never load image bytes. Database storage
+    # survives app restarts/deployments and is included in normal database backups.
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    image = models.BinaryField()
+    version = models.UUIDField(default=uuid4)
 
 
 class OTPChallenge(models.Model):

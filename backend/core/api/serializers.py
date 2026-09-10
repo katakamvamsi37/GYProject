@@ -7,6 +7,8 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Sum
 from rest_framework import serializers
 from core.models import Member, Plan, Expense, Payment, UserProfile, AuditEvent
+from core.services.phone import normalize_phone
+from core.services.profile_images import prepare_avatar
 
 
 class MemberSerializer(serializers.ModelSerializer):
@@ -113,11 +115,37 @@ class ReviewSerializer(serializers.Serializer):
     note = serializers.CharField(max_length=500, allow_blank=False)
 
 
-class ProfileSerializer(serializers.Serializer):
+class PhoneSerializerMixin:
+    def validate_phone(self, value):
+        try:
+            value = normalize_phone(value)
+        except ValueError as error:
+            raise serializers.ValidationError(str(error))
+        user = self.context.get("user")
+        if (
+            value
+            and UserProfile.objects.filter(phone=value)
+            .exclude(user_id=user.pk if user else None)
+            .exists()
+        ):
+            raise serializers.ValidationError("This mobile number is already in use.")
+        return value
+
+
+class ProfileSerializer(PhoneSerializerMixin, serializers.Serializer):
     name = serializers.CharField(max_length=150)
     email = serializers.EmailField()
     phone = serializers.CharField(max_length=30, allow_blank=True)
     avatar_url = serializers.URLField(allow_blank=True)
+    avatar = serializers.FileField(write_only=True, required=False)
+
+    def validate_avatar(self, value):
+        return prepare_avatar(value)
+
+    def validate(self, attrs):
+        if "avatar" in attrs and "avatar_url" in attrs:
+            raise serializers.ValidationError({"avatar": "Send either avatar or avatar_url."})
+        return attrs
 
     def validate_email(self, value):
         value = value.strip().lower()
@@ -131,10 +159,11 @@ class ProfileSerializer(serializers.Serializer):
         return value
 
 
-class CreateUserSerializer(serializers.Serializer):
+class CreateUserSerializer(PhoneSerializerMixin, serializers.Serializer):
     name = serializers.CharField(max_length=150)
     email = serializers.EmailField()
-    password = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True, trim_whitespace=False)
+    phone = serializers.CharField(max_length=30, allow_blank=True, required=False, default="")
     role = serializers.ChoiceField(choices=UserProfile.ROLE_CHOICES, default="member")
 
     def validate(self, attrs):
@@ -160,9 +189,19 @@ class UserAccessSerializer(serializers.Serializer):
     is_active = serializers.BooleanField()
 
 
-class PasswordSerializer(serializers.Serializer):
-    current_password = serializers.CharField()
-    new_password = serializers.CharField()
+class AdminPasswordSerializer(serializers.Serializer):
+    new_password = serializers.CharField(write_only=True, trim_whitespace=False)
+
+    def validate_new_password(self, value):
+        try:
+            validate_password(value, self.context["user"])
+        except DjangoValidationError as error:
+            raise serializers.ValidationError(error.messages)
+        return value
+
+
+class PasswordSerializer(AdminPasswordSerializer):
+    current_password = serializers.CharField(write_only=True, trim_whitespace=False)
 
     def validate(self, attrs):
         user = self.context["user"]
@@ -170,10 +209,6 @@ class PasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {"current_password": "Current password is incorrect."}
             )
-        try:
-            validate_password(attrs["new_password"], user)
-        except DjangoValidationError as error:
-            raise serializers.ValidationError({"new_password": error.messages})
         return attrs
 
 

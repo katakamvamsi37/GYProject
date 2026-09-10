@@ -97,7 +97,7 @@ class AuthenticationTests(APITestCase):
         self.use("member")
         response = self.client.patch(
             f"/api/profiles/{user.pk}/",
-            {"phone": "99999", "email": "changed@example.test", "role": "admin"},
+            {"phone": "9876543210", "email": "changed@example.test", "role": "admin"},
             format="json",
         )
         self.assertEqual(response.status_code, 200)

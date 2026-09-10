@@ -11,6 +11,7 @@ router.register("plans", PlanViewSet)
 router.register("expenses", ExpenseViewSet)
 router.register("payments", PaymentViewSet)
 router.register("audit", AuditViewSet)
+
 urlpatterns = [
     path("dashboard/", dashboard),
     path("login/", auth.login),
@@ -20,7 +21,11 @@ urlpatterns = [
     path("signup/", auth.signup),
     path("users/", auth.users),
     path("users/<int:user_id>/access/", auth.user_access),
+    path("users/<int:user_id>/password/", auth.admin_password),
     path("profiles/<int:user_id>/", auth.profile_detail),
+    path(
+        "profiles/<int:user_id>/avatar/<uuid:version>/", auth.profile_avatar, name="profile-avatar"
+    ),
     path("auth/otp/request/", auth.otp_unavailable),
     path("auth/otp/verify/", auth.otp_unavailable),
     path("auth/password/reset/", auth.otp_unavailable),
