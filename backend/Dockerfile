@@ -14,10 +14,15 @@ RUN python -m pip install --no-cache-dir -r requirements.lock.txt \
     && useradd --uid 10001 --gid app --no-create-home app
 
 # Explicit copies keep local databases, .env files and development keys out.
-COPY manage.py gunicorn.conf.py ./
-COPY config ./config
-COPY core ./core
-COPY docker ./docker
+COPY --chown=10001:10001 manage.py gunicorn.conf.py ./
+COPY --chown=10001:10001 config ./config
+COPY --chown=10001:10001 core ./core
+COPY --chown=10001:10001 docker ./docker
+
+# Ensure the non-root application user can read Python sources and execute shell helpers.
+RUN chmod -R u+rwX,go+rX /app \
+    && find /app/docker -type f -name '*.sh' -exec chmod 755 {} +
+
 # Static collection needs settings, but never production secrets or a live DB.
 RUN DJANGO_DEBUG=true DJANGO_SECRET_KEY=static-build-placeholder \
     python manage.py collectstatic --noinput
