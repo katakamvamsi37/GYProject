@@ -11,9 +11,9 @@ from core.models import UserProfile
 class Command(BaseCommand):
     help = "Create the initial Render administrator from deployment environment variables."
 
-    username_key = "DJANGO_SUPERUSER_USERNAME"
-    email_key = "DJANGO_SUPERUSER_EMAIL"
-    password_key = "DJANGO_SUPERUSER_PASSWORD"
+    username_key = "vamsi"
+    email_key = "katakamvamsi37@gmail.com"
+    password_key = "Vamsi@868876"
 
     def handle(self, *args, **options):
         values = {key: os.getenv(key, "").strip() for key in self._required_keys()}
