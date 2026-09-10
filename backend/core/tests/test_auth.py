@@ -4,6 +4,35 @@ from .base import APITestCase
 
 
 class AuthenticationTests(APITestCase):
+    def test_missing_login_fields_do_not_query_accounts(self):
+        self.use(None)
+        for body in ({}, {"email": "  ", "password": "test"}, {"email": "admin"}):
+            with self.subTest(body=body), self.assertNumQueries(0):
+                self.assertEqual(self.post("/api/login/", body).status_code, 400)
+
+    def test_login_accepts_email_address(self):
+        self.use(None)
+        response = self.post(
+            "/api/login/", {"email": "ADMIN@example.test", "password": "FestivalPass!234"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["user"]["role"], "admin")
+
+    def test_initial_superuser_can_sign_in_without_existing_profile(self):
+        from django.contrib.auth import get_user_model
+
+        self.use(None)
+        get_user_model().objects.create_superuser(
+            username="initial-admin",
+            email="initial@example.test",
+            password="InitialFestival!234",
+        )
+        response = self.post(
+            "/api/login/", {"email": "initial@example.test", "password": "InitialFestival!234"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["user"]["role"], "admin")
+
     def test_fresh_session_requires_login(self):
         self.use(None)
         self.assertEqual(self.client.get("/api/me/").status_code, 401)

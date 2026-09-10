@@ -5,12 +5,14 @@ import secrets
 from datetime import timedelta
 from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
+from corsheaders.defaults import default_headers
 import dj_database_url
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
-DEBUG = os.getenv("DJANGO_DEBUG", "true").lower() == "true"
+IS_RENDER = os.getenv("RENDER", "").lower() == "true" or bool(os.getenv("RENDER_EXTERNAL_HOSTNAME"))
+DEBUG = os.getenv("DJANGO_DEBUG", "false" if IS_RENDER else "true").lower() == "true"
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "")
 if not SECRET_KEY:
     if not DEBUG:
@@ -90,6 +92,11 @@ elif os.getenv("POSTGRES_DB"):
         }
     }
 else:
+    if IS_RENDER or not DEBUG:
+        raise ImproperlyConfigured(
+            "Set DATABASE_URL to your Render PostgreSQL Internal Database URL "
+            "(or configure POSTGRES_DB and the other POSTGRES_* settings)."
+        )
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -118,10 +125,14 @@ STORAGES = {
 }
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CORS_ALLOWED_ORIGINS = [
-    "https://gy-project-frontend.onrender.com",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
+    origin.strip().rstrip("/")
+    for origin in os.getenv(
+        "CORS_ALLOWED_ORIGINS",
+        "https://gy-project-frontend.onrender.com,http://localhost:5173,http://127.0.0.1:5173",
+    ).split(",")
+    if origin.strip()
 ]
+CORS_ALLOW_HEADERS = [*default_headers, "idempotency-key"]
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 EMAIL_BACKEND = os.getenv(
     "EMAIL_BACKEND",
@@ -133,6 +144,9 @@ EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "true").lower() == "true"
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
+# Render terminates HTTPS at its proxy and forwards the original scheme.
+if IS_RENDER:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG

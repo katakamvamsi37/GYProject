@@ -52,6 +52,8 @@ def login(request):
     if not isinstance(identifier, str) or not isinstance(password, str):
         return Response({"detail": "Provide a username and password."}, status=400)
     identifier = identifier.strip()
+    if not identifier or not password:
+        return Response({"detail": "Provide a username and password."}, status=400)
     account = get_user_model().objects.filter(username=identifier).first()
     if not account:
         matches = list(get_user_model().objects.filter(email__iexact=identifier)[:2])

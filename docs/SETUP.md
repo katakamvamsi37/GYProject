@@ -66,17 +66,31 @@ DJANGO_ALLOWED_HOSTS=<your-backend-service>.onrender.com
 CORS_ALLOWED_ORIGINS=https://<your-frontend-domain>
 ```
 
-Use these Render Web Service settings from the repository root:
+Use these Render Web Service settings when the Render service Root Directory is
+`backend`:
 
 ```text
-Build Command: pip install -r backend/requirements.lock.txt && python backend/manage.py collectstatic --noinput
-Start Command: gunicorn --chdir backend config.wsgi:application
+Root Directory: backend
+Build Command: bash build.sh
+Start Command: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
 ```
 
-Run the database migration once after the service is connected:
+The build script installs dependencies, collects static files, applies database
+migrations, and optionally creates the first administrator from the
+`DJANGO_SUPERUSER_*` environment variables. Do not append `pip install` or
+another command to `collectstatic`; that makes `pip` an invalid
+`collectstatic` argument and causes this error:
 
 ```text
-python backend/manage.py migrate
+manage.py collectstatic: error: unrecognized arguments: pip
+```
+
+If the service Root Directory is intentionally left blank, use these equivalent
+commands instead:
+
+```text
+Build Command: bash backend/build.sh
+Start Command: gunicorn --chdir backend config.wsgi:application --bind 0.0.0.0:$PORT
 ```
 
 For local PostgreSQL, provide the split connection variables shown in
