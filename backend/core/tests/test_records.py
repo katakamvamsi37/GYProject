@@ -1,7 +1,8 @@
 from datetime import date
 from decimal import Decimal
+from django.contrib.auth import get_user_model
 from django.core.management import call_command
-from core.models import Expense, Payment, Plan, AuditEvent
+from core.models import Expense, Payment, Plan, AuditEvent, UserProfile
 from .base import APITestCase
 
 YEAR = date.today().year
@@ -146,6 +147,65 @@ class FinancialWorkflowTests(APITestCase):
             200,
         )
         self.assertEqual(Decimal(self.client.get("/api/dashboard/").data["collected"]), 200)
+
+    def test_second_admin_can_approve_cash_collection(self):
+        creator = self.accounts["admin"]
+        reviewer = get_user_model().objects.create_user(username="second_admin")
+        UserProfile.objects.create(user=reviewer, role="admin")
+        response = self.post(
+            "/api/payments/",
+            {
+                "donor_name": "uday",
+                "amount": "100000.00",
+                "method": "Cash",
+                "transaction_reference": "",
+                "paid_on": f"{YEAR}-09-10T12:00:00+05:30",
+            },
+        )
+        self.assertEqual(response.status_code, 201, response.data)
+        item_id = response.data["id"]
+        url = f"/api/payments/{item_id}/review/"
+        decision = {"action": "approve", "note": "good"}
+        own_review = self.post(url, decision)
+        self.assertEqual(own_review.status_code, 400)
+        self.assertIn("A different administrator", str(own_review.data["detail"]))
+        self.assertEqual(Payment.objects.get(pk=item_id).status, "pending")
+
+        self.client.force_authenticate(user=reviewer)
+        response = self.post(url, decision)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["status"], "confirmed")
+        self.assertEqual(response.data["created_by"], creator.pk)
+        self.assertEqual(response.data["reviewed_by"], reviewer.pk)
+        self.assertEqual(response.data["reviewed_by_name"], reviewer.username)
+        self.assertEqual(response.data["review_note"], "good")
+        self.assertIsNotNone(response.data["reviewed_at"])
+        self.assertEqual(
+            Decimal(self.client.get(f"/api/dashboard/?year={YEAR}").data["collected"]),
+            Decimal("100000.00"),
+        )
+        self.assertEqual(self.post(url, decision).status_code, 400)
+        event = AuditEvent.objects.get(
+            resource="payment", object_id=str(item_id), action="approve"
+        )
+        self.assertEqual(event.actor_id, reviewer.pk)
+        self.assertEqual(event.before["status"], "pending")
+        self.assertEqual(event.after["status"], "confirmed")
+
+    def test_second_admin_can_approve_expense_without_budget(self):
+        response = self.expense()
+        self.assertEqual(response.status_code, 201)
+        reviewer = get_user_model().objects.create_user(username="second_admin")
+        UserProfile.objects.create(user=reviewer, role="admin")
+        self.client.force_authenticate(user=reviewer)
+        response = self.post(
+            f"/api/expenses/{response.data['id']}/review/",
+            {"action": "approve", "note": "Receipt verified"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["status"], "approved")
+        self.assertIsNone(response.data["plan"])
+        self.assertEqual(response.data["reviewed_by"], reviewer.pk)
 
     def test_list_pagination_and_audit_read_only(self):
         Expense.objects.bulk_create(

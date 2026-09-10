@@ -8,6 +8,31 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - database: sqlite
+            database_url: "sqlite:///:memory:"
+          - database: postgresql
+            database_url: "postgresql://gytest:gytest@localhost:5432/gytest"
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: gytest
+          POSTGRES_PASSWORD: gytest
+          POSTGRES_DB: gytest
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U gytest"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: ${{ matrix.database_url }}
+      DJANGO_DEBUG: "true"
+      DJANGO_SECRET_KEY: "ci-test-only-secret"
     defaults:
       run:
         working-directory: backend

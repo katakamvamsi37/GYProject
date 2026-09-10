@@ -147,7 +147,14 @@ class FinancialRecords(AuditedRecords):
         serializer = ReviewSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         with transaction.atomic():
-            instance = self.get_queryset().select_for_update().get(pk=self.get_object().pk)
+            # Lock only the financial record: PostgreSQL cannot lock the nullable
+            # outer joins used to display creator, reviewer, and budget details.
+            instance = (
+                self.get_queryset()
+                .select_related(None)
+                .select_for_update()
+                .get(pk=self.get_object().pk)
+            )
             if instance.created_by_id == request.user.pk:
                 raise ValidationError(
                     {"detail": "A different administrator or treasurer must review your entry."}
