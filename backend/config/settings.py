@@ -159,12 +159,23 @@ if TRUST_PROXY_HEADERS:
 if os.getenv("DJANGO_HTTP_HEALTHCHECK", "false").lower() == "true":
     SECURE_REDIRECT_EXEMPT = [r"^health/$"]
     MIDDLEWARE.insert(0, "config.health.ContainerHealthMiddleware")
-SECURE_SSL_REDIRECT = not DEBUG
-SESSION_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_SECURE = not DEBUG
-SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
-SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
-SECURE_HSTS_PRELOAD = not DEBUG
+
+# Keep production-secure defaults, while allowing an explicitly configured
+# HTTP-only deployment (for example, a single-instance Beanstalk environment)
+# until TLS is terminated by a load balancer, CloudFront, or a custom domain.
+SECURE_SSL_REDIRECT = os.getenv(
+    "DJANGO_SECURE_SSL_REDIRECT", "false" if DEBUG else "true"
+).lower() == "true"
+SECURE_COOKIES = os.getenv(
+    "DJANGO_SECURE_COOKIES", "false" if DEBUG else "true"
+).lower() == "true"
+SESSION_COOKIE_SECURE = SECURE_COOKIES
+CSRF_COOKIE_SECURE = SECURE_COOKIES
+SECURE_HSTS_SECONDS = int(
+    os.getenv("DJANGO_HSTS_SECONDS", "0" if DEBUG else "31536000")
+)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
+SECURE_HSTS_PRELOAD = SECURE_HSTS_SECONDS > 0
 # A shared database cache is sufficient for the initial committee workload and
 # avoids process-local throttles. Run createcachetable in the release task.
 if cache_table := os.getenv("DJANGO_CACHE_TABLE"):
