@@ -27,7 +27,13 @@ def run_release():
             stage = "database provisioning"
             log_stage(stage)
             subprocess.run(
-                [sys.executable, "docker/provision_database.py", "--if-missing"], check=True
+                [
+                    sys.executable,
+                    "docker/provision_database.py",
+                    "--if-missing",
+                    "--sync-existing",
+                ],
+                check=True,
             )
 
         # The Gunicorn process does not need database-admin credentials.
