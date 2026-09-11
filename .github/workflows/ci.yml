@@ -81,3 +81,23 @@ jobs:
 
       - name: Build frontend
         run: npm run build
+
+  beanstalk-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Build Elastic Beanstalk ZIP
+        run: python scripts/package_beanstalk.py
+
+      - name: Upload Elastic Beanstalk ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: gyproject-beanstalk
+          path: deploy/gyproject-beanstalk.zip
+          if-no-files-found: error
